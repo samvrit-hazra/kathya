@@ -1,12 +1,29 @@
 """Tests for the Kathya job runner and request parsing."""
 
+import json
+import os
 import shutil
 import tempfile
+import threading
 import unittest
+import urllib.request
+from http.server import ThreadingHTTPServer
 from pathlib import Path
+from unittest import mock
 
 import registry
-from app import JobRunner, ToolError, _update_progress, parse_multipart, static_asset
+from app import (
+    JobRunner,
+    ToolError,
+    _update_progress,
+    health_report,
+    keepalive_enabled,
+    keepalive_interval,
+    keepalive_target,
+    parse_multipart,
+    ping_health,
+    static_asset,
+)
 
 
 def _multipart(field: str, filename: str | None, payload: bytes) -> tuple[dict, bytes]:
@@ -113,6 +130,85 @@ def registry_path():
     from pathlib import Path
 
     return Path(__file__).resolve().parent.parent
+
+
+class HealthTests(unittest.TestCase):
+    def _serve(self) -> str:
+        from app import Handler
+
+        class QuietHandler(Handler):
+            def log_message(self, format: str, *args) -> None:
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), QuietHandler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return f"http://127.0.0.1:{server.server_address[1]}"
+
+    def test_report_is_small_and_starts_at_zero_jobs(self):
+        report = health_report()
+
+        self.assertEqual(set(report), {"status", "service", "uptime", "tools", "jobs"})
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["jobs"], {"running": 0, "queued": 0})
+        self.assertGreaterEqual(report["uptime"], 0)
+
+    def test_endpoint_returns_json(self):
+        base = self._serve()
+
+        with urllib.request.urlopen(base + "/api/health", timeout=5) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.headers["Content-Type"], "application/json; charset=utf-8")
+            self.assertEqual(response.headers["Cache-Control"], "no-store")
+            payload = json.loads(response.read())
+
+        self.assertEqual(payload["status"], "ok")
+        self.assertEqual(payload["service"], "kathya")
+
+    def test_ping_health_reaches_the_endpoint(self):
+        base = self._serve()
+
+        ping_health(base + "/api/health", timeout=5)
+
+
+class KeepaliveTests(unittest.TestCase):
+    def test_target_prefers_an_explicit_url(self):
+        env = {
+            "KATHYA_KEEPALIVE_URL": "https://kathya.example.com/",
+            "RENDER_EXTERNAL_URL": "https://kathya.onrender.com",
+        }
+
+        with mock.patch.dict(os.environ, env):
+            self.assertEqual(keepalive_target(), "https://kathya.example.com/api/health")
+
+    def test_target_falls_back_to_the_render_url(self):
+        with mock.patch.dict(os.environ, {"RENDER_EXTERNAL_URL": "https://kathya.onrender.com"}):
+            self.assertEqual(keepalive_target(), "https://kathya.onrender.com/api/health")
+
+    def test_target_is_none_without_a_public_url(self):
+        env = {"KATHYA_KEEPALIVE_URL": "", "RENDER_EXTERNAL_URL": ""}
+
+        with mock.patch.dict(os.environ, env):
+            self.assertIsNone(keepalive_target())
+
+    def test_enabled_values(self):
+        for value in ("1", "true", "YES", "on"):
+            with mock.patch.dict(os.environ, {"KATHYA_KEEPALIVE": value}):
+                self.assertTrue(keepalive_enabled(), value)
+        for value in ("", "0", "no", "off"):
+            with mock.patch.dict(os.environ, {"KATHYA_KEEPALIVE": value}):
+                self.assertFalse(keepalive_enabled(), value)
+
+    def test_interval_defaults_floors_and_ignores_junk(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(keepalive_interval(), 600.0)
+        with mock.patch.dict(os.environ, {"KATHYA_KEEPALIVE_SECONDS": "120"}):
+            self.assertEqual(keepalive_interval(), 120.0)
+        with mock.patch.dict(os.environ, {"KATHYA_KEEPALIVE_SECONDS": "5"}):
+            self.assertEqual(keepalive_interval(), 60.0)
+        with mock.patch.dict(os.environ, {"KATHYA_KEEPALIVE_SECONDS": "soon"}):
+            self.assertEqual(keepalive_interval(), 600.0)
 
 
 def _placeholders(token: str) -> list[str]:

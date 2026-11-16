@@ -33,6 +33,35 @@ A few limits are worth knowing before you use it:
   `--caption-font` in the registry command or deploy via Docker with
   `fonts-dejavu-core`.
 
+### Health endpoint and keep-alive
+
+`GET /api/health` returns a small JSON body and never touches the disk, so it is
+cheap enough for frequent probes:
+
+```json
+{"status": "ok", "service": "kathya", "uptime": 128.4, "tools": 1,
+ "jobs": {"running": 0, "queued": 0}}
+```
+
+Render's own health checks are internal probes: they keep deploys honest, but
+they do **not** count as inbound traffic and will not stop a free instance from
+spinning down after 15 idle minutes. So Kathya can also ping its own public URL:
+
+```bash
+KATHYA_KEEPALIVE=1 python3 app.py --host 0.0.0.0 --port $PORT --no-browser
+```
+
+On Render the target comes from `RENDER_EXTERNAL_URL`, which Render sets
+automatically; elsewhere set `KATHYA_KEEPALIVE_URL=https://your-app.example`.
+The ping goes out over the public URL and back through the proxy every
+`KATHYA_KEEPALIVE_SECONDS` (default 600, minimum 60). Set `KATHYA_KEEPALIVE=0`
+to stop it. The Blueprint enables it already.
+
+Keeping a service awake around the clock uses roughly a month of the 750 free
+instance hours, and Render can still restart a free instance at any time. An
+external uptime monitor (pointed at `/api/health`) does the same job without the
+self-ping, if you prefer that.
+
 ## Voiceover to video
 
 Upload a narration — audio or video — and get back an MP4 slideshow with your own

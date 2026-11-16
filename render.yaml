@@ -18,7 +18,7 @@ services:
     numInstances: 1
     buildCommand: pip install -r requirements.txt
     startCommand: python3 app.py --host 0.0.0.0 --port $PORT --no-browser
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.7"
@@ -26,9 +26,17 @@ services:
       # deployed (it is gitignored).
       - key: GROQ_API_KEY
         sync: false
+      # Ping our own public URL every 10 minutes so the free instance never
+      # sits idle for 15 minutes and spins down. Render's health checks are
+      # internal probes and do not count as inbound traffic.
+      - key: KATHYA_KEEPALIVE
+        value: "1"
 
 # Notes for this app:
 # - Native runtimes ship ffmpeg on Debian 12, so no extra build step is needed.
+# - The keepalive keeps the service running around the clock, which consumes
+#   roughly a month of the 750 free instance hours. Drop KATHYA_KEEPALIVE to
+#   let it sleep when unused.
 # - data/jobs/ is on ephemeral disk: uploads and rendered videos disappear on
 #   deploy, restart, and free-tier spin-down. Download results right away, or
 #   move job storage to a persistent disk on a paid plan.
