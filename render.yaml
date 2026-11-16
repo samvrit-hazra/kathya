@@ -1,0 +1,36 @@
+# Render Blueprint for Kathya.
+#
+# Deploy: push this repo to GitHub/GitLab, then in Render choose
+# New > Blueprint and point it at the repo. Render creates the service below
+# and prompts for GROQ_API_KEY.
+#
+# Keep numInstances at 1: jobs are queued inside the process (WORKERS = 1 in
+# app.py), so a second instance would hold job state the first one cannot serve.
+
+services:
+  - type: web
+    name: kathya
+    runtime: python
+    # Free is 0.1 CPU / 512 MB and sleeps after 15 idle minutes. Uploads are
+    # buffered in memory, so use 1c-2g (1 CPU / 2 GB) for large files and
+    # noticeably faster renders.
+    plan: free
+    numInstances: 1
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 app.py --host 0.0.0.0 --port $PORT --no-browser
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      # Real environment variables take precedence over .env, which is not
+      # deployed (it is gitignored).
+      - key: GROQ_API_KEY
+        sync: false
+
+# Notes for this app:
+# - Native runtimes ship ffmpeg on Debian 12, so no extra build step is needed.
+# - data/jobs/ is on ephemeral disk: uploads and rendered videos disappear on
+#   deploy, restart, and free-tier spin-down. Download results right away, or
+#   move job storage to a persistent disk on a paid plan.
+# - The service is public and unauthenticated; anyone with the URL can spend
+#   your Groq quota and CPU.

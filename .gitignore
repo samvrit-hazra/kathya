@@ -1,0 +1,51 @@
+AGENTS.md
+CONTEXT.md
+skills/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Project-specific output & temp directories
+data/
+outputs/
+voiceover2video_work/
+story_video.mp4
+*.log
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Testing & quality tools
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDEs & OS artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

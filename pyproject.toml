@@ -1,0 +1,17 @@
+[project]
+name = "voiceover2video"
+version = "0.1.0"
+description = "Turn a story voiceover into a slideshow video using Speech-to-Text LLM, Wikimedia Commons images and ffmpeg."
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.40.0",
+    "requests>=2.28.0",
+    "pillow>=10.0.0",
+]
+
+[project.scripts]
+voiceover2video = "voiceover2video.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

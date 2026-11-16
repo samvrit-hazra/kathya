@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voiceover to video — Kathya</title>
+  <link rel="stylesheet" href="/site.css" />
+</head>
+<body data-tool="voiceover2video">
+  <main class="wrap wrap--tool">
+    <header class="masthead">
+      <a class="wordmark" href="/">Kathya</a>
+      <a class="masthead-link" href="/">All tools</a>
+    </header>
+
+    <section class="tool-head">
+      <h1 id="tool-name">Voiceover to video</h1>
+      <p class="tool-tagline" id="tool-tagline">
+        Turn a recorded narration into a slideshow with your own words as captions.
+      </p>
+    </section>
+
+    <form class="form" id="form" novalidate>
+      <div id="fields"></div>
+
+      <div class="actions">
+        <button class="button" id="submit" type="submit" disabled>Generate video</button>
+        <a class="download" id="download" href="" download hidden>Download</a>
+        <button class="link-button" id="again" type="button" hidden>Start another</button>
+      </div>
+
+      <div class="progress" id="progress" hidden>
+        <span class="progress-fill" id="progress-fill"></span>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <footer class="foot">
+      Each tool runs on this machine. Results are kept in <code>data/jobs</code>
+      until the last 20 are cleared.
+    </footer>
+  </main>
+
+  <script src="/site.js"></script>
+</body>
+</html>
