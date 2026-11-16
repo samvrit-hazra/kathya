@@ -19,7 +19,6 @@ import subprocess
 import sys
 import threading
 import time
-import urllib.request
 import uuid
 import webbrowser
 from email.parser import BytesParser
@@ -48,8 +47,6 @@ KEEP_JOBS = 20
 ERROR_LINES = 12
 WORKERS = 1
 
-KEEPALIVE_INTERVAL = 600
-KEEPALIVE_MIN_INTERVAL = 60
 APP_STARTED = time.time()
 
 RUNNER: "JobRunner | None" = None
@@ -132,60 +129,6 @@ def health_report() -> dict:
         "tools": len(TOOLS),
         "jobs": {"running": running, "queued": queued},
     }
-
-
-def keepalive_enabled() -> bool:
-    return os.environ.get("KATHYA_KEEPALIVE", "").strip().lower() in {"1", "true", "yes", "on"}
-
-
-def keepalive_interval() -> float:
-    raw = os.environ.get("KATHYA_KEEPALIVE_SECONDS", "").strip()
-    try:
-        return max(KEEPALIVE_MIN_INTERVAL, float(raw)) if raw else float(KEEPALIVE_INTERVAL)
-    except ValueError:
-        return float(KEEPALIVE_INTERVAL)
-
-
-def keepalive_target() -> str | None:
-    """The public URL to ping, or None when this deployment has no public URL.
-
-    Render sets RENDER_EXTERNAL_URL. Other hosts can set KATHYA_KEEPALIVE_URL,
-    which takes precedence.
-    """
-    base = os.environ.get("KATHYA_KEEPALIVE_URL", "").strip() or os.environ.get(
-        "RENDER_EXTERNAL_URL", ""
-    ).strip()
-    return f"{base.rstrip('/')}/api/health" if base else None
-
-
-def ping_health(target: str, timeout: float = 30.0) -> None:
-    with urllib.request.urlopen(target, timeout=timeout) as response:
-        response.read()
-
-
-def start_keepalive(target: str, interval: float) -> threading.Thread:
-    """Ping our own public URL, keeping a free instance from spinning down.
-
-    Render's own health checks are internal probes and do not count as inbound
-    traffic, so this has to go out over the public URL and back through the
-    proxy. Any error is logged and retried on the next tick.
-    """
-
-    def loop() -> None:
-        print(
-            f"Kathya keepalive → {target} every {interval:.0f}s",
-            file=sys.stderr,
-        )
-        while True:
-            try:
-                ping_health(target)
-            except Exception as exc:  # noqa: BLE001 - keep pinging through hiccups
-                print(f"Kathya keepalive failed: {exc}", file=sys.stderr)
-            time.sleep(interval)
-
-    thread = threading.Thread(target=loop, name="kathya-keepalive", daemon=True)
-    thread.start()
-    return thread
 
 
 def _clean_activity(line: str) -> str:
@@ -597,15 +540,6 @@ def main(argv: list[str] | None = None) -> int:
     url = f"http://{args.host}:{args.port}"
 
     print(f"Kathya → {url}", file=sys.stderr)
-    if keepalive_enabled():
-        target = keepalive_target()
-        if target is None:
-            print(
-                "Kathya keepalive: set KATHYA_KEEPALIVE_URL (or RENDER_EXTERNAL_URL) to enable it.",
-                file=sys.stderr,
-            )
-        else:
-            start_keepalive(target, keepalive_interval())
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
 

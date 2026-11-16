@@ -33,7 +33,7 @@ A few limits are worth knowing before you use it:
   `--caption-font` in the registry command or deploy via Docker with
   `fonts-dejavu-core`.
 
-### Health endpoint and keep-alive
+### Health endpoint and uptime monitors
 
 `GET /api/health` returns a small JSON body and never touches the disk, so it is
 cheap enough for frequent probes:
@@ -43,24 +43,24 @@ cheap enough for frequent probes:
  "jobs": {"running": 0, "queued": 0}}
 ```
 
-Render's own health checks are internal probes: they keep deploys honest, but
-they do **not** count as inbound traffic and will not stop a free instance from
-spinning down after 15 idle minutes. So Kathya can also ping its own public URL:
+Render's own health checks are internal probes: they gate deploys, but they do
+**not** count as inbound traffic and will not stop a free instance from spinning
+down after 15 idle minutes. An external monitor fixes that. With UptimeRobot:
 
-```bash
-KATHYA_KEEPALIVE=1 python3 app.py --host 0.0.0.0 --port $PORT --no-browser
-```
+1. **Add New Monitor** → monitor type **HTTP(s)**.
+2. URL: `https://<your-service>.onrender.com/api/health`.
+3. Interval: **5 minutes** (anything under 15 works).
+4. Expect HTTP 200 and `"status": "ok"` in the body.
 
-On Render the target comes from `RENDER_EXTERNAL_URL`, which Render sets
-automatically; elsewhere set `KATHYA_KEEPALIVE_URL=https://your-app.example`.
-The ping goes out over the public URL and back through the proxy every
-`KATHYA_KEEPALIVE_SECONDS` (default 600, minimum 60). Set `KATHYA_KEEPALIVE=0`
-to stop it. The Blueprint enables it already.
+That request wakes the service if it has already spun down — something the app
+cannot do for itself — and resets the idle timer while it is up. A monitor every
+10 minutes is enough; 5 just gives more slack.
 
-Keeping a service awake around the clock uses roughly a month of the 750 free
-instance hours, and Render can still restart a free instance at any time. An
-external uptime monitor (pointed at `/api/health`) does the same job without the
-self-ping, if you prefer that.
+Two things to keep in mind: keeping the service awake around the clock uses
+roughly a month of the 750 free instance hours, and Render may still restart a
+free instance at any time (which wipes `data/jobs/`). `healthCheckPath` in
+`render.yaml` is set to `/api/health`, but that only gates deploys — it is the
+monitor that keeps the instance warm.
 
 ## Voiceover to video
 

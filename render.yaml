@@ -26,17 +26,14 @@ services:
       # deployed (it is gitignored).
       - key: GROQ_API_KEY
         sync: false
-      # Ping our own public URL every 10 minutes so the free instance never
-      # sits idle for 15 minutes and spins down. Render's health checks are
-      # internal probes and do not count as inbound traffic.
-      - key: KATHYA_KEEPALIVE
-        value: "1"
 
 # Notes for this app:
 # - Native runtimes ship ffmpeg on Debian 12, so no extra build step is needed.
-# - The keepalive keeps the service running around the clock, which consumes
-#   roughly a month of the 750 free instance hours. Drop KATHYA_KEEPALIVE to
-#   let it sleep when unused.
+# - healthCheckPath is for deploy gating, not for staying awake: Render's own
+#   probes do not count as inbound traffic. Use an external monitor (UptimeRobot
+#   and friends) against /api/health every 5-10 minutes to prevent spin-down.
+# - Staying awake around the clock consumes roughly a month of the 750 free
+#   instance hours.
 # - data/jobs/ is on ephemeral disk: uploads and rendered videos disappear on
 #   deploy, restart, and free-tier spin-down. Download results right away, or
 #   move job storage to a persistent disk on a paid plan.
