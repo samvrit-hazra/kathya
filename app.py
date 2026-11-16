@@ -416,6 +416,14 @@ class Handler(BaseHTTPRequestHandler):
 
         self._error(404, "Not found.")
 
+    def do_HEAD(self) -> None:  # noqa: N802 - http.server naming
+        # UptimeRobot's HTTP monitors default to HEAD.
+        if urlparse(self.path).path == "/api/health":
+            body = json.dumps(health_report()).encode()
+            self._respond(200, body, "application/json; charset=utf-8", head=True)
+            return
+        self._respond(404, b"", "text/plain; charset=utf-8", head=True)
+
     def do_POST(self) -> None:  # noqa: N802 - http.server naming
         if urlparse(self.path).path != "/api/jobs":
             self._error(404, "Not found.")
@@ -514,13 +522,14 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, status: int, message: str) -> None:
         self._respond(status, message.encode(), "text/plain; charset=utf-8")
 
-    def _respond(self, status: int, body: bytes, content_type: str) -> None:
+    def _respond(self, status: int, body: bytes, content_type: str, head: bool = False) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if not head:
+            self.wfile.write(body)
 
     def log_message(self, format: str, *args) -> None:
         sys.stderr.write(f"[kathya] {format % args}\n")

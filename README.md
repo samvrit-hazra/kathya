@@ -50,9 +50,14 @@ down after 15 idle minutes. An external monitor fixes that. With UptimeRobot:
 1. **Add New Monitor** → monitor type **HTTP(s)**.
 2. URL: `https://<your-service>.onrender.com/api/health`.
 3. Interval: **5 minutes** (anything under 15 works).
-4. Expect HTTP 200 and `"status": "ok"` in the body.
+4. Expect HTTP 200.
 
-That request wakes the service if it has already spun down — something the app
+UptimeRobot sends a `HEAD` request by default, so `/api/health` answers `HEAD`
+as well as `GET` (headers only, same status and `Content-Length`). If you want
+the body checked too, switch the monitor type to **Keyword** and look for
+`"status": "ok"`; that sends a real `GET`.
+
+Either request wakes the service if it has already spun down — something the app
 cannot do for itself — and resets the idle timer while it is up. A monitor every
 10 minutes is enough; 5 just gives more slack.
 

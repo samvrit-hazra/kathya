@@ -160,6 +160,16 @@ class HealthTests(unittest.TestCase):
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["service"], "kathya")
 
+    def test_endpoint_answers_head_for_uptime_monitors(self):
+        base = self._serve()
+
+        request = urllib.request.Request(base + "/api/health", method="HEAD")
+        with urllib.request.urlopen(request, timeout=5) as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.headers["Content-Type"], "application/json; charset=utf-8")
+            self.assertGreater(int(response.headers["Content-Length"]), 0)
+            self.assertEqual(response.read(), b"")
+
 
 def _placeholders(token: str) -> list[str]:
     import re
