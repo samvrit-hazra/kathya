@@ -31,6 +31,7 @@ python app.py                         # http://127.0.0.1:8000
 ```
 app.py                 # Kathya: job runner, upload handling, HTTP server
 registry.py            # catalogue: TOOLS + UPCOMING_TOOLS (add tools here)
+API.md                 # HTTP API reference
 render.yaml            # Render Blueprint (free tier, health check, env var)
 requirements.txt       # shared deps for the app and both tools
 pyproject.toml         # Python 3.10+ and the voiceover2video console script
