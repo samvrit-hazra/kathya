@@ -19,6 +19,12 @@ python -m pip install -r requirements.txt
 python app.py                         # http://127.0.0.1:8000
 ```
 
+## TODO
+
+- [ ] **Smart Audio Recorder** — add background noise reduction, silent-part removal and transcript generation.
+- [ ] **Podcast Generator** — generate an RSS feed that works across podcast apps and platforms.
+- [ ] **Local LLM support via Ollama** — integrate locally running LLM via Ollama as an alternative to Groq.
+
 ## Tools
 
 | Tool | Status | What it does |
