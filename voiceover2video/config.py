@@ -1,5 +1,12 @@
 """Default configuration for voiceover2video."""
 
+from pathlib import Path
+
+# --- Tool-local runtime paths (kept inside this folder, not the repo root) ---
+TOOL_DIR = Path(__file__).resolve().parent
+DEFAULT_OUTPUT = str(TOOL_DIR / "outputs" / "story_video.mp4")
+DEFAULT_WORK_DIR = str(TOOL_DIR / "work")
+
 # --- Groq (story understanding / image keyword generation) ---
 GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 LOCAL_BASE_URL = "http://localhost:11434/v1"

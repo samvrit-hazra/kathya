@@ -6,8 +6,8 @@
   --stage: #e2e2da;
   --focus: #1d3fd1;
   --danger: #a32a1c;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans Devanagari", sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Noto Serif Devanagari", serif;
 }
 
 * { box-sizing: border-box; }
@@ -50,10 +50,27 @@ a { color: inherit; }
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
   font-family: var(--serif);
   font-size: 19px;
   letter-spacing: -0.01em;
   text-decoration: none;
+}
+
+.wordmark > span {
+  font: inherit;
+  line-height: 1;
+}
+
+.wordmark-sep {
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 a.wordmark:hover {
@@ -127,6 +144,49 @@ a.wordmark:hover {
   opacity: 0.72;
 }
 
+/* Planned tools: same tile shape and shade, but never clickable. */
+.tile--soon {
+  border-style: dashed;
+  cursor: default;
+}
+
+.tile--soon:hover {
+  background: var(--stage);
+  color: var(--ink);
+}
+
+.tile--soon:hover .tile-note {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.tile-status {
+  align-self: flex-start;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tile--soon .tile-name {
+  margin-top: 12px;
+  font-size: clamp(19px, 2vw, 22px);
+}
+
+.tile--soon .tile-note {
+  margin-top: 8px;
+}
+
+.tile-features {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
 .shelf-empty {
   grid-column: 1 / -1;
   margin: 0;
@@ -198,7 +258,16 @@ a.wordmark:hover {
   outline-offset: -3px;
 }
 
-.drop.is-picked .wave { opacity: 0.25; }
+.drop.is-picked .wave,
+.drop.is-picked .tool-icon { opacity: 0.25; }
+
+.tool-icon {
+  display: block;
+  width: 56px;
+  height: 40px;
+  color: currentColor;
+  opacity: 0.85;
+}
 
 .wave {
   display: flex;
@@ -391,6 +460,7 @@ a.wordmark:hover {
   .drop { padding: 18px 18px 46px; gap: 15px; }
   .wave { height: 30px; }
   .wave i { height: calc(var(--h) * 0.75); }
+  .tool-icon { width: 45px; height: 32px; }
   .actions { gap: 10px 14px; }
 }
 

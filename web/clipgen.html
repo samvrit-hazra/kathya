@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clip generator — कथ्य // Kathya</title>
+  <link rel="stylesheet" href="/site.css" />
+</head>
+<body data-tool="clipgen">
+  <main class="wrap wrap--tool">
+    <header class="masthead">
+      <a class="wordmark" href="/"><span lang="sa">कथ्य</span> <span class="wordmark-sep" aria-hidden="true">//</span> <span lang="en">Kathya</span></a>
+      <a class="masthead-link" href="/">All tools</a>
+    </header>
+
+    <section class="tool-head">
+      <h1 id="tool-name">Clip generator</h1>
+      <p class="tool-tagline" id="tool-tagline">
+        Find the best moments in a long video and cut them into subtitled shorts.
+      </p>
+    </section>
+
+    <form class="form" id="form" novalidate>
+      <div id="fields"></div>
+
+      <div class="actions">
+        <button class="button" id="submit" type="submit" disabled>Make clips</button>
+        <a class="download" id="download" href="" download hidden>Download ZIP</a>
+        <button class="link-button" id="again" type="button" hidden>Start another</button>
+      </div>
+
+      <div class="progress" id="progress" hidden>
+        <span class="progress-fill" id="progress-fill"></span>
+      </div>
+
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </form>
+
+    <footer class="foot">
+      <p>Transcription and clip selection by Groq. Clips, captions and portrait crops cut with ffmpeg. The result is a ZIP of every clip and a manifest.</p>
+    </footer>
+  </main>
+
+  <script src="/site.js"></script>
+</body>
+</html>

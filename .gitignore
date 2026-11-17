@@ -7,11 +7,14 @@ skills/
 .env.*
 !.env.example
 
-# Project-specific output & temp directories
+# Project-specific output & temp directories (jobs in data/, tools own the rest)
 data/
-outputs/
-voiceover2video_work/
+voiceover2video/work/
+voiceover2video/outputs/
+clipgen/work/
+clipgen/outputs/
 story_video.mp4
+clipgen/video.mp4
 *.log
 
 # Python bytecode & cache

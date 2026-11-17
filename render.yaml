@@ -1,4 +1,4 @@
-# Render Blueprint for Kathya.
+# Render Blueprint for कथ्य // Kathya.
 #
 # Deploy: push this repo to GitHub/GitLab, then in Render choose
 # New > Blueprint and point it at the repo. Render creates the service below
@@ -28,14 +28,19 @@ services:
         sync: false
 
 # Notes for this app:
-# - Native runtimes ship ffmpeg on Debian 12, so no extra build step is needed.
+# - Native runtimes ship ffmpeg, so no extra build step is needed.
+#   requirements.txt also installs both tools' Python packages (including
+#   clipgen's groq, pydantic-settings, faster-whisper and imageio-ffmpeg).
+# - The root .venv/ is local-only and gitignored; this build installs the same
+#   requirements.txt into Render's own runtime. Upcoming shelf tools are
+#   metadata-only in registry.py and need no deploy config.
 # - healthCheckPath is for deploy gating, not for staying awake: Render's own
 #   probes do not count as inbound traffic. Use an external monitor (UptimeRobot
 #   and friends) against /api/health every 5-10 minutes to prevent spin-down.
 # - Staying awake around the clock consumes roughly a month of the 750 free
 #   instance hours.
-# - data/jobs/ is on ephemeral disk: uploads and rendered videos disappear on
-#   deploy, restart, and free-tier spin-down. Download results right away, or
-#   move job storage to a persistent disk on a paid plan.
+# - data/jobs/ is intentionally ephemeral: uploads and rendered videos disappear
+#   on deploy, restart, and free-tier spin-down. No persistent disk is attached;
+#   download results while the instance is alive.
 # - The service is public and unauthenticated; anyone with the URL can spend
 #   your Groq quota and CPU.

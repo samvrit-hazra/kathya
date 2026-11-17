@@ -22,11 +22,16 @@ function element(tag, className, text) {
   return node;
 }
 
-async function fetchTools() {
+async function fetchCatalogue() {
   const response = await fetch("/api/tools", { cache: "no-store" });
-  if (!response.ok) throw new Error("Kathya could not load the tool list.");
+  if (!response.ok) throw new Error("कथ्य // Kathya could not load the tool list.");
   const payload = await response.json();
-  return payload.tools || [];
+  return { tools: payload.tools || [], upcoming: payload.upcoming || [] };
+}
+
+async function fetchTools() {
+  const { tools } = await fetchCatalogue();
+  return tools;
 }
 
 function formatSize(bytes) {
@@ -54,21 +59,28 @@ async function startIndex() {
   const shelf = byId("shelf");
   const note = byId("shelf-note");
 
-  let tools;
+  let tools, upcoming;
   try {
-    tools = await fetchTools();
+    ({ tools, upcoming } = await fetchCatalogue());
   } catch (error) {
     shelf.replaceChildren(element("p", "shelf-empty", error.message));
     return;
   }
 
-  if (!tools.length) {
+  if (!tools.length && !upcoming.length) {
     shelf.replaceChildren(element("p", "shelf-empty", "No tools yet. Add one to registry.py."));
     return;
   }
 
-  shelf.replaceChildren(...tools.map(buildTile));
-  note.textContent = tools.length === 1 ? "One tool so far." : tools.length + " tools.";
+  shelf.replaceChildren(...tools.map(buildTile), ...upcoming.map(buildUpcomingTile));
+
+  const parts = [
+    tools.length === 1 ? "1 tool available." : tools.length + " tools available.",
+  ];
+  if (upcoming.length) {
+    parts.push(upcoming.length + (upcoming.length === 1 ? " more tool" : " more tools") + " under development.");
+  }
+  note.textContent = parts.join(" ");
 }
 
 function buildTile(tool) {
@@ -77,6 +89,17 @@ function buildTile(tool) {
   tile.append(
     element("span", "tile-name", tool.name),
     element("span", "tile-note", tool.tagline),
+  );
+  return tile;
+}
+
+function buildUpcomingTile(tool) {
+  const tile = element("div", "tile tile--soon");
+  tile.append(
+    element("span", "tile-status", tool.status),
+    element("span", "tile-name", tool.name),
+    element("span", "tile-note", tool.tagline),
+    element("span", "tile-features", tool.features.join(" · ")),
   );
   return tile;
 }
@@ -103,7 +126,7 @@ async function startTool() {
   }
 
   state.tool = tool;
-  document.title = tool.name + " — Kathya";
+  document.title = tool.name + " — कथ्य // Kathya";
   byId("tool-name").textContent = tool.name;
   byId("tool-tagline").textContent = tool.tagline;
 
@@ -118,6 +141,37 @@ async function startTool() {
 
   byId("form").addEventListener("submit", submitJob);
   byId("again").addEventListener("click", () => window.location.reload());
+}
+
+function videoIcon() {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", "tool-icon");
+  svg.setAttribute("viewBox", "0 0 56 40");
+  svg.setAttribute("aria-hidden", "true");
+
+  const frame = document.createElementNS(ns, "rect");
+  frame.setAttribute("x", "1");
+  frame.setAttribute("y", "1");
+  frame.setAttribute("width", "54");
+  frame.setAttribute("height", "38");
+  frame.setAttribute("fill", "none");
+  frame.setAttribute("stroke", "currentColor");
+  frame.setAttribute("stroke-width", "2");
+
+  const play = document.createElementNS(ns, "path");
+  play.setAttribute("d", "M23 12 L40 20 L23 28 Z");
+  play.setAttribute("fill", "currentColor");
+
+  svg.append(frame, play);
+  return svg;
+}
+
+function stageIcon(input) {
+  const accept = (input.accept || "").toLowerCase();
+  return accept.includes("video/") && !accept.includes("audio/")
+    ? videoIcon()
+    : waveElement();
 }
 
 function waveElement() {
@@ -185,7 +239,7 @@ function buildStage(input) {
   player.playsInline = true;
   player.hidden = true;
 
-  drop.append(waveElement(), title, hint, caption, picker);
+  drop.append(stageIcon(input), title, hint, caption, picker);
   stage.append(drop, player);
   return stage;
 }
@@ -243,6 +297,7 @@ function suggestedName() {
     "audio/wav": "wav",
     "image/png": "png",
     "image/jpeg": "jpg",
+    "application/zip": "zip",
   };
   return stem + "." + (types[state.tool?.output_type] || "mp4");
 }
@@ -264,8 +319,9 @@ function showResult(job) {
   const player = document.querySelector(".player");
   const drop = document.querySelector(".drop");
   const url = job.output_url;
+  const previewable = Boolean(url) && /^(video|audio|image)\//.test(job.output_type);
 
-  if (player && url) {
+  if (player && previewable) {
     if (job.output_type.startsWith("image/")) {
       const image = element("img", "player");
       image.alt = "Result";
@@ -280,13 +336,14 @@ function showResult(job) {
       player.src = url;
       player.hidden = false;
     }
-    if (drop) drop.hidden = true;
   }
+  if (drop && url) drop.hidden = true;
 
   const download = byId("download");
   download.href = url || "";
   download.download = suggestedName();
   download.hidden = !url;
+  download.textContent = job.output_type === "application/zip" ? "Download ZIP" : "Download";
 
   const button = byId("submit");
   button.dataset.busy = "false";
@@ -295,9 +352,12 @@ function showResult(job) {
 
   byId("again").hidden = false;
   byId("progress-fill").style.setProperty("--value", "1");
-  setStatus(
-    "Done in " + formatElapsed(job.elapsed) + (url ? ". Preview above, or download it." : "."),
-  );
+  const note = !url
+    ? "."
+    : previewable
+      ? ". Preview above, or download it."
+      : ". Your files are in the ZIP below.";
+  setStatus("Done in " + formatElapsed(job.elapsed) + note);
 }
 
 function fail(message, detail) {

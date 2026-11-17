@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from registry import TOOLS, get_tool, public_catalogue
+from registry import TOOLS, get_tool, public_catalogue, public_upcoming
 
 ROOT = Path(__file__).resolve().parent
 WEB_DIR = (ROOT / "web").resolve()
@@ -133,8 +133,11 @@ def health_report() -> dict:
 
 def _clean_activity(line: str) -> str:
     text = line.strip()
-    match = re.match(r"^\[[^\]]+\]\s*(.*)$", text)
-    return match.group(1) if match else text
+    match = re.match(r"^\[([^\]]+)\]\s*(.*)$", text)
+    # Keep clipgen's "[2/5]" counters; drop timestamp-style log prefixes.
+    if match and not re.fullmatch(r"\d+/\d+", match.group(1)):
+        return match.group(2)
+    return text
 
 
 def _update_progress(job: dict, line: str) -> None:
@@ -143,11 +146,12 @@ def _update_progress(job: dict, line: str) -> None:
     if not text:
         return
 
-    total = re.search(r"(?:targeting|into) (\d+) (?:slide|scene)", text)
+    total = re.search(r"(?:targeting|into|Generating) (\d+) (?:slide|scene|clip)", text)
     if total:
         job["scene_total"] = int(total.group(1))
+        noun = "clips" if "clip" in total.group(0).lower() else "slides"
         job["progress"] = max(job["progress"] or 0.0, 0.1)
-        job["activity"] = f"Working on {job['scene_total']} slides"
+        job["activity"] = f"Working on {job['scene_total']} {noun}"
         return
 
     scene = re.search(r"Scene (\d+):", text)
@@ -158,9 +162,34 @@ def _update_progress(job: dict, line: str) -> None:
         job["activity"] = f"Rendering slide {index + 1} of {job['scene_total']}"
         return
 
+    # ClipGenerator prints one bracketed counter per clip it cuts.
+    clip = re.search(r"\[(\d+)/(\d+)\]", text)
+    if clip and job.get("scene_total"):
+        index, count = int(clip.group(1)), int(clip.group(2))
+        job["scene_index"] = index
+        job["progress"] = round(0.4 + 0.5 * min(index / count, 1.0), 2)
+        job["activity"] = f"Cutting clip {index} of {count}"
+        return
+
     if "Whisper transcribed" in text:
         job["progress"] = max(job["progress"] or 0.0, 0.05)
         job["activity"] = "Transcribed the voiceover"
+        return
+
+    words = re.search(r"Transcribed (\d+) words", text)
+    if words:
+        job["progress"] = max(job["progress"] or 0.0, 0.2)
+        job["activity"] = f"Transcribed {int(words.group(1))} words"
+        return
+
+    if "Analyzing transcript" in text:
+        job["progress"] = max(job["progress"] or 0.0, 0.3)
+        job["activity"] = "Finding the best moments"
+        return
+
+    if text.startswith("Packaged "):
+        job["progress"] = max(job["progress"] or 0.0, 0.99)
+        job["activity"] = text
         return
 
     job["activity"] = text[:160]
@@ -389,7 +418,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/tools":
-            self._json(200, {"tools": public_catalogue()})
+            self._json(200, {"tools": public_catalogue(), "upcoming": public_upcoming()})
             return
 
         if path == "/api/health":

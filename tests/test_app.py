@@ -101,6 +101,23 @@ class CatalogueTests(unittest.TestCase):
             self.assertNotIn("output_name", tool)
             self.assertTrue(tool["page"].endswith(".html"))
 
+    def test_upcoming_tools_cannot_be_submitted(self):
+        upcoming = registry.public_upcoming()
+
+        self.assertEqual(
+            [tool["name"] for tool in upcoming],
+            ["Smart Audio Recorder", "Podcast Generator"],
+        )
+        for tool in upcoming:
+            self.assertNotIn("page", tool)
+            self.assertNotIn("command", tool)
+            self.assertNotIn("inputs", tool)
+            self.assertIn("Under development", tool["status"])
+            self.assertTrue(tool["features"])
+
+        live_ids = {tool["id"] for tool in registry.public_catalogue()}
+        self.assertTrue(live_ids.isdisjoint({tool["id"] for tool in upcoming}))
+
 
 class PageTests(unittest.TestCase):
     def test_every_tool_has_a_page(self):
@@ -112,7 +129,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(static_asset("/index.html").name, "index.html")
 
     def test_serves_pages_styles_and_scripts(self):
-        for path in ("/voiceover2video.html", "/site.css", "/site.js"):
+        for path in ("/voiceover2video.html", "/clipgen.html", "/site.css", "/site.js"):
             self.assertIsNotNone(static_asset(path), path)
 
     def test_never_serves_anything_outside_web(self):
@@ -170,6 +187,15 @@ class HealthTests(unittest.TestCase):
             self.assertGreater(int(response.headers["Content-Length"]), 0)
             self.assertEqual(response.read(), b"")
 
+    def test_tools_endpoint_also_returns_upcoming_tools(self):
+        base = self._serve()
+
+        with urllib.request.urlopen(base + "/api/tools", timeout=5) as response:
+            payload = json.loads(response.read())
+
+        self.assertEqual(payload["tools"], registry.public_catalogue())
+        self.assertEqual(payload["upcoming"], registry.public_upcoming())
+
 
 def _placeholders(token: str) -> list[str]:
     import re
@@ -194,6 +220,27 @@ class ProgressTests(unittest.TestCase):
         self.assertEqual(job["scene_index"], 1)
         self.assertEqual(job["activity"], "Rendering slide 2 of 4")
         self.assertGreater(job["progress"], 0.4)
+
+    def test_counts_clipgen_stages(self):
+        job = {"progress": 0.0, "activity": "", "scene_total": None, "scene_index": None}
+
+        _update_progress(job, "Transcribed 812 words.")
+        self.assertEqual(job["activity"], "Transcribed 812 words")
+
+        _update_progress(job, "Analyzing transcript for the best moments...")
+        self.assertEqual(job["activity"], "Finding the best moments")
+
+        _update_progress(job, "Generating 4 clip(s)...")
+        self.assertEqual(job["scene_total"], 4)
+        self.assertEqual(job["activity"], "Working on 4 clips")
+
+        _update_progress(job, "  [2/4] The hook (12.0s - 48.0s)")
+        self.assertEqual(job["scene_index"], 2)
+        self.assertEqual(job["activity"], "Cutting clip 2 of 4")
+        self.assertAlmostEqual(job["progress"], 0.65)
+
+        _update_progress(job, "Packaged 9 file(s) into clips.zip")
+        self.assertAlmostEqual(job["progress"], 0.99)
 
 
 class JobRunnerTests(unittest.TestCase):

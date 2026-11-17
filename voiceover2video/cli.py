@@ -8,6 +8,8 @@ from pathlib import Path
 
 from .config import (
     DEFAULT_GROQ_MODEL,
+    DEFAULT_OUTPUT,
+    DEFAULT_WORK_DIR,
     GROQ_API_KEY_ENV,
     GROQ_BASE_URL,
     GROQ_MODEL_ENV,
@@ -56,10 +58,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Path to a story text file, '-' for stdin, or the story text itself.",
     )
-    parser.add_argument("-o", "--output", default="story_video.mp4", help="Output video file path (default: story_video.mp4).")
+    parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT, help="Output video file path (default: voiceover2video/outputs/story_video.mp4).")
     parser.add_argument("--api-key", default=os.environ.get(GROQ_API_KEY_ENV), help=f"Groq API key (or set {GROQ_API_KEY_ENV}).")
     parser.add_argument("--groq-model", default=os.environ.get(GROQ_MODEL_ENV) or DEFAULT_GROQ_MODEL, help="Groq model to use (default: %(default)s).")
-    parser.add_argument("--work-dir", default=None, help="Working directory for intermediate scene files (default: voiceover2video_work).")
+    parser.add_argument("--work-dir", default=DEFAULT_WORK_DIR, help="Working directory for intermediate scene files (default: voiceover2video/work).")
     parser.add_argument("--caption-fontsize", type=float, default=40, help="Caption font size in pixels (default: 40).")
     parser.add_argument("--caption-font", default=None, help="Path to TTF font for captions (default: auto-detect DejaVu Sans Bold).")
     parser.add_argument("--voiceover", default=None, help="Optional path to a voiceover audio file (e.g. narration.mp3) to transcribe and add to the video.")
@@ -114,7 +116,8 @@ def _render(args: argparse.Namespace, client, voiceover: str | None) -> str:
     print(f"[voiceover2video] Storyboarded into {len(scenes)} scene(s).", file=sys.stderr)
 
     output_path = args.output
-    work_dir = args.work_dir or "voiceover2video_work"
+    work_dir = args.work_dir or DEFAULT_WORK_DIR
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
     def image_provider(scene) -> str | None:
         keyword = scene.keywords[0] if scene.keywords else scene.search_keyword
