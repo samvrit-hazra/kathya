@@ -2,6 +2,8 @@
 
 Empowers storytellers, podcasters and authors with AI-native production tools that run locally.
 
+![Kathya in action](https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDlnY3RkM3RsaGh2Y2loNTc2NnVqa2UxNWZ4ejJjcWFvNTd4bHBhMyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/6XX4V0O8a0xdS/giphy.gif)
+
 ## Installation and Setup
 
 Requires Python 3.10+ and `ffmpeg`/`ffprobe` on your PATH.
